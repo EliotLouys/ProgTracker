@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" // Recommandé pour la prod, tu peux mettre "sqlite" pour démarrer vite en local
+  url      = env("DATABASE_URL")
+}
+
+// --- UTILISATEURS ---
+model User {
+  id                  String     @id @default(uuid())
+  // On stocke les tokens ici pour que le backend puisse requêter Strava de manière autonome
+  stravaId            BigInt?    @unique
+  stravaRefreshToken  String?
+  stravaAccessToken   String?
+  
+  activities          Activity[]
+  meals               MealLog[]
+}
+
+// --- CALORIES OUT (STRAVA) ---
+model Activity {
+  id               BigInt   @id // L'ID natif de Strava (Attention, c'est un gros nombre, d'où le BigInt)
+  userId           String
+  name             String
+  distance         Float    // en mètres
+  movingTime       Int      // en secondes
+  calories         Float    // La VRAIE valeur récupérée via le webhook
+  startDate        DateTime
+  type             String   // "Ride", "Run", etc.
+  
+  user             User     @relation(fields: [userId], references: [id])
+
+  @@index([userId, startDate]) // Index pour accélérer tes filtres 7J / 30J
+}
+
+// --- REFERENTIEL CALORIES IN (CIQUAL) ---
+// Cette table sera remplie une seule fois via un script de seed
+model CiqualItem {
+  id               Int      @id // Code aliment CIQUAL
+  name             String   // ex: "Pomme de terre, cuite à l'eau"
+  kcalPer100g      Float
+  proteins         Float?
+  carbs            Float?
+  fats             Float?
+  
+  @@index([name]) // Pour la barre de recherche textuelle du frontend
+}
+
+// --- CALORIES IN (JOURNAL DES REPAS) ---
+model MealLog {
+  id               String   @id @default(uuid())
+  userId           String
+  name             String   // Nom du produit (OFF) ou de l'aliment (CIQUAL)
+  source           DataSource 
+  externalId       String?  // Le code barre OFF (string) ou le code CIQUAL (converti en string)
+  
+  quantityGrams    Float    // Quantité ingérée
+  totalCalories    Float    // Calculé au moment de l'insertion (quantity * kcalPer100g / 100)
+  
+  consumedAt       DateTime @default(now())
+  
+  user             User     @relation(fields: [userId], references: [id])
+}
+
+enum DataSource {
+  OPEN_FOOD_FACTS
+  CIQUAL
+  CUSTOM // Au cas où l'utilisateur ajoute un repas manuellement
+}

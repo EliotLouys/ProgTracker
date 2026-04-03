@@ -1,0 +1,38 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.handleWebhook = exports.verifyWebhook = void 0;
+const prisma_1 = require("../lib/prisma");
+const strava_service_1 = require("../services/strava.service");
+const verifyWebhook = (req, res) => {
+    const challenge = req.query["hub.challenge"];
+    if (req.query["hub.verify_token"] === process.env.STRAVA_WEBHOOK_VERIFY_TOKEN) {
+        return res.status(200).json({ "hub.challenge": challenge });
+    }
+    res.sendStatus(403);
+};
+exports.verifyWebhook = verifyWebhook;
+const handleWebhook = async (req, res) => {
+    res.status(200).send("EVENT_RECEIVED");
+    const { object_type, aspect_type, object_id, owner_id } = req.body;
+    if (object_type === "activity" && aspect_type === "create") {
+        const user = await prisma_1.prisma.user.findUnique({
+            where: { stravaId: owner_id },
+        });
+        if (user && user.stravaAccessToken) {
+            const data = await (0, strava_service_1.getDetailedActivity)(object_id, user.stravaAccessToken);
+            await prisma_1.prisma.activity.create({
+                data: {
+                    id: BigInt(data.id),
+                    userId: user.id,
+                    name: data.name,
+                    distance: data.distance,
+                    movingTime: data.moving_time,
+                    calories: data.calories || 0,
+                    startDate: new Date(data.start_date),
+                    type: data.type,
+                },
+            });
+        }
+    }
+};
+exports.handleWebhook = handleWebhook;
