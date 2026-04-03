@@ -51,6 +51,7 @@ exports.router.post("/strava/webhook", strava.handleWebhook);
 exports.router.post("/strava/backfill", auth_middleware_1.authenticateToken, strava.stravaBackfill);
 // Protected
 exports.router.get("/dashboard", auth_middleware_1.authenticateToken, dash.getDashboard);
+exports.router.get("/activities", auth_middleware_1.authenticateToken, dash.getActivities);
 exports.router.get("/food/barcode/:code", auth_middleware_1.authenticateToken, food.getByBarcode);
 exports.router.get("/food/search", auth_middleware_1.authenticateToken, food.searchCiqual);
 exports.router.post("/meals/log", auth_middleware_1.authenticateToken, meal.logMeal);

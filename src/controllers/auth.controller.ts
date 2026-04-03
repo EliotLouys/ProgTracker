@@ -4,6 +4,11 @@ import jwt from "jsonwebtoken";
 import { prisma } from "../lib/prisma";
 import { exchangeStravaCode } from "../services/strava.service";
 
+type AuthStatePayload = {
+  nonce: string;
+  appRedirectUri?: string;
+};
+
 const buildApiJwt = (userId: string) => {
   return jwt.sign({ userId }, process.env.JWT_SECRET as string, {
     expiresIn: "30d",
@@ -37,10 +42,14 @@ const upsertUserFromStravaCode = async (code: string) => {
   return { token, user, athlete };
 };
 
-export const getStravaAuthUrl = async (_req: Request, res: Response) => {
+export const getStravaAuthUrl = async (req: Request, res: Response) => {
   const clientId = process.env.STRAVA_CLIENT_ID;
   const redirectUri = process.env.STRAVA_REDIRECT_URI;
   const scope = process.env.STRAVA_SCOPES || "read,activity:read_all";
+  const appRedirectUri =
+    typeof req.query.app_redirect_uri === "string"
+      ? req.query.app_redirect_uri
+      : undefined;
 
   if (!clientId || !redirectUri) {
     return res.status(500).json({
@@ -49,7 +58,7 @@ export const getStravaAuthUrl = async (_req: Request, res: Response) => {
   }
 
   const state = jwt.sign(
-    { nonce: randomUUID() },
+    { nonce: randomUUID(), appRedirectUri } satisfies AuthStatePayload,
     process.env.JWT_SECRET as string,
     { expiresIn: "10m" },
   );
@@ -77,12 +86,19 @@ export const stravaCallback = async (req: Request, res: Response) => {
   }
 
   try {
-    jwt.verify(state, process.env.JWT_SECRET as string);
+    const decoded = jwt.verify(
+      state,
+      process.env.JWT_SECRET as string,
+    ) as AuthStatePayload;
     const { token, user, athlete } = await upsertUserFromStravaCode(code);
-    res.json({
-      token,
-      user: { id: user.id, firstname: athlete.firstname },
-    });
+    if (decoded.appRedirectUri) {
+      const target = new URL(decoded.appRedirectUri);
+      target.searchParams.set("token", token);
+      target.searchParams.set("firstname", athlete.firstname || "");
+      return res.redirect(target.toString());
+    }
+
+    res.json({ token, user: { id: user.id, firstname: athlete.firstname } });
   } catch (err) {
     if (err instanceof jwt.JsonWebTokenError) {
       return res.status(401).json({ error: "Invalid OAuth state" });

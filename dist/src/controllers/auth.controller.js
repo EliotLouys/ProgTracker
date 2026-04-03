@@ -36,16 +36,19 @@ const upsertUserFromStravaCode = async (code) => {
     const token = buildApiJwt(user.id);
     return { token, user, athlete };
 };
-const getStravaAuthUrl = async (_req, res) => {
+const getStravaAuthUrl = async (req, res) => {
     const clientId = process.env.STRAVA_CLIENT_ID;
     const redirectUri = process.env.STRAVA_REDIRECT_URI;
     const scope = process.env.STRAVA_SCOPES || "read,activity:read_all";
+    const appRedirectUri = typeof req.query.app_redirect_uri === "string"
+        ? req.query.app_redirect_uri
+        : undefined;
     if (!clientId || !redirectUri) {
         return res.status(500).json({
             error: "Missing STRAVA_CLIENT_ID or STRAVA_REDIRECT_URI",
         });
     }
-    const state = jsonwebtoken_1.default.sign({ nonce: (0, crypto_1.randomUUID)() }, process.env.JWT_SECRET, { expiresIn: "10m" });
+    const state = jsonwebtoken_1.default.sign({ nonce: (0, crypto_1.randomUUID)(), appRedirectUri }, process.env.JWT_SECRET, { expiresIn: "10m" });
     const authUrl = new URL("https://www.strava.com/oauth/authorize");
     authUrl.searchParams.set("client_id", clientId);
     authUrl.searchParams.set("redirect_uri", redirectUri);
@@ -66,12 +69,15 @@ const stravaCallback = async (req, res) => {
         return res.status(400).json({ error: "Missing OAuth state" });
     }
     try {
-        jsonwebtoken_1.default.verify(state, process.env.JWT_SECRET);
+        const decoded = jsonwebtoken_1.default.verify(state, process.env.JWT_SECRET);
         const { token, user, athlete } = await upsertUserFromStravaCode(code);
-        res.json({
-            token,
-            user: { id: user.id, firstname: athlete.firstname },
-        });
+        if (decoded.appRedirectUri) {
+            const target = new URL(decoded.appRedirectUri);
+            target.searchParams.set("token", token);
+            target.searchParams.set("firstname", athlete.firstname || "");
+            return res.redirect(target.toString());
+        }
+        res.json({ token, user: { id: user.id, firstname: athlete.firstname } });
     }
     catch (err) {
         if (err instanceof jsonwebtoken_1.default.JsonWebTokenError) {

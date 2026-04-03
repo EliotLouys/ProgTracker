@@ -18,6 +18,7 @@ router.post("/strava/backfill", authenticateToken, strava.stravaBackfill);
 
 // Protected
 router.get("/dashboard", authenticateToken, dash.getDashboard);
+router.get("/activities", authenticateToken, dash.getActivities);
 router.get("/food/barcode/:code", authenticateToken, food.getByBarcode);
 router.get("/food/search", authenticateToken, food.searchCiqual);
 router.post("/meals/log", authenticateToken, meal.logMeal);
