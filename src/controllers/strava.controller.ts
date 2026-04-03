@@ -1,9 +1,11 @@
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
+import { AuthRequest } from "../middlewares/auth.middleware";
 import {
   getDetailedActivity,
   getValidStravaAccessTokenByStravaId,
 } from "../services/strava.service";
+import { importHistory } from "../scripts/backfill";
 
 export const verifyWebhook = (req: Request, res: Response) => {
   const challenge = req.query["hub.challenge"];
@@ -44,5 +46,19 @@ export const handleWebhook = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("Strava webhook processing failed:", error);
+  }
+};
+
+export const stravaBackfill = async (req: AuthRequest, res: Response) => {
+  const userId = req.userId;
+  if (!userId) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  try {
+    await importHistory(userId);
+    res.status(200).json({ message: "Backfill completed" });
+  } catch (error) {
+    console.error("Strava backfill failed:", error);
+    res.status(500).json({ error: "Backfill failed" });
   }
 };

@@ -1,8 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.handleWebhook = exports.verifyWebhook = void 0;
+exports.stravaBackfill = exports.handleWebhook = exports.verifyWebhook = void 0;
 const prisma_1 = require("../lib/prisma");
 const strava_service_1 = require("../services/strava.service");
+const backfill_1 = require("../scripts/backfill");
 const verifyWebhook = (req, res) => {
     const challenge = req.query["hub.challenge"];
     if (req.query["hub.verify_token"] === process.env.STRAVA_WEBHOOK_VERIFY_TOKEN) {
@@ -42,3 +43,18 @@ const handleWebhook = async (req, res) => {
     }
 };
 exports.handleWebhook = handleWebhook;
+const stravaBackfill = async (req, res) => {
+    const userId = req.userId;
+    if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+    try {
+        await (0, backfill_1.importHistory)(userId);
+        res.status(200).json({ message: "Backfill completed" });
+    }
+    catch (error) {
+        console.error("Strava backfill failed:", error);
+        res.status(500).json({ error: "Backfill failed" });
+    }
+};
+exports.stravaBackfill = stravaBackfill;

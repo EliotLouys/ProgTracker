@@ -3,12 +3,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const client_1 = require("@prisma/client");
+exports.importHistory = importHistory;
 const axios_1 = __importDefault(require("axios"));
 const strava_service_1 = require("../services/strava.service");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../lib/prisma");
 async function importHistory(userId) {
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const user = await prisma_1.prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
         console.error("❌ Utilisateur introuvable ou Token Strava manquant.");
         return;
@@ -20,7 +20,7 @@ async function importHistory(userId) {
             headers: { Authorization: `Bearer ${listToken}` },
         });
         for (const act of res.data) {
-            const exists = await prisma.activity.findUnique({
+            const exists = await prisma_1.prisma.activity.findUnique({
                 where: { id: BigInt(act.id) },
             });
             if (exists) {
@@ -32,7 +32,7 @@ async function importHistory(userId) {
             const detail = await axios_1.default.get(`https://www.strava.com/api/v3/activities/${act.id}`, {
                 headers: { Authorization: `Bearer ${detailToken}` },
             });
-            await prisma.activity.create({
+            await prisma_1.prisma.activity.create({
                 data: {
                     id: BigInt(detail.data.id),
                     userId: user.id,
@@ -50,11 +50,8 @@ async function importHistory(userId) {
         console.log("🎉 Backfill terminé !");
     }
     catch (error) {
-        console.error("Erreur lors du backfill:", error.response?.data || error.message);
-    }
-    finally {
-        await prisma.$disconnect();
+        const message = error.response?.data || error.message;
+        console.error("Erreur lors du backfill:", message);
+        throw new Error(typeof message === "string" ? message : JSON.stringify(message));
     }
 }
-// Remplace par ton ID utilisateur (celui généré par la BDD)
-importHistory("TON_USER_ID_ICI");

@@ -1,10 +1,9 @@
-import { PrismaClient } from "@prisma/client";
 import axios from "axios";
 import { getValidStravaAccessTokenByUserId } from "../services/strava.service";
+import { prisma } from "../lib/prisma";
 
-const prisma = new PrismaClient();
 
-async function importHistory(userId: string) {
+export async function importHistory(userId: string) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
     console.error("❌ Utilisateur introuvable ou Token Strava manquant.");
@@ -56,14 +55,15 @@ async function importHistory(userId: string) {
     }
     console.log("🎉 Backfill terminé !");
   } catch (error: any) {
+    const message = error.response?.data || error.message;
     console.error(
       "Erreur lors du backfill:",
-      error.response?.data || error.message,
+      message,
     );
-  } finally {
-    await prisma.$disconnect();
+    throw new Error(
+      typeof message === "string" ? message : JSON.stringify(message),
+    );
   }
 }
 
-// Remplace par ton ID utilisateur (celui généré par la BDD)
-importHistory("");
+

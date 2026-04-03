@@ -48,6 +48,7 @@ exports.router.get("/auth/strava/callback", auth.stravaCallback);
 exports.router.post("/auth/strava", auth.stravaLogin);
 exports.router.get("/strava/webhook", strava.verifyWebhook);
 exports.router.post("/strava/webhook", strava.handleWebhook);
+exports.router.post("/strava/backfill", auth_middleware_1.authenticateToken, strava.stravaBackfill);
 // Protected
 exports.router.get("/dashboard", auth_middleware_1.authenticateToken, dash.getDashboard);
 exports.router.get("/food/barcode/:code", auth_middleware_1.authenticateToken, food.getByBarcode);
