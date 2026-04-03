@@ -12,9 +12,7 @@
     "seed:backfill": "npx tsx src/scripts/backfill.ts"
   },
   "prisma": {
-    "seed-ciqual": "tsx prisma/seed-ciqual.ts",
-    "seed-user": "tsx prisma/user-seed.ts",
-    "full-seed": "seed-ciqual && seed-user"
+    "seed": "tsx prisma/seed.ts"
   },
   "keywords": [],
   "author": "",

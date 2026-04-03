@@ -1,4 +1,99 @@
 import axios from "axios";
+import { prisma } from "../lib/prisma";
+
+const STRAVA_OAUTH_TOKEN_URL = "https://www.strava.com/oauth/token";
+const TOKEN_EXPIRY_SAFETY_WINDOW_SECONDS = 60;
+
+type OAuthTokenResponse = {
+  access_token: string;
+  refresh_token: string;
+  expires_at: number;
+  athlete?: {
+    id: number;
+    firstname?: string;
+  };
+};
+
+const nowInSeconds = () => Math.floor(Date.now() / 1000);
+
+const requireStravaClientCredentials = () => {
+  const clientId = process.env.STRAVA_CLIENT_ID;
+  const clientSecret = process.env.STRAVA_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    throw new Error("Missing STRAVA_CLIENT_ID or STRAVA_CLIENT_SECRET");
+  }
+  return { clientId, clientSecret };
+};
+
+const shouldRefreshToken = (expiresAt: number | null) => {
+  if (!expiresAt) return true;
+  return expiresAt <= nowInSeconds() + TOKEN_EXPIRY_SAFETY_WINDOW_SECONDS;
+};
+
+export const exchangeStravaCode = async (code: string) => {
+  const { clientId, clientSecret } = requireStravaClientCredentials();
+  const resp = await axios.post<OAuthTokenResponse>(STRAVA_OAUTH_TOKEN_URL, {
+    client_id: clientId,
+    client_secret: clientSecret,
+    code,
+    grant_type: "authorization_code",
+  });
+  return resp.data;
+};
+
+export const refreshStravaAccessToken = async (refreshToken: string) => {
+  const { clientId, clientSecret } = requireStravaClientCredentials();
+  const resp = await axios.post<OAuthTokenResponse>(STRAVA_OAUTH_TOKEN_URL, {
+    client_id: clientId,
+    client_secret: clientSecret,
+    refresh_token: refreshToken,
+    grant_type: "refresh_token",
+  });
+  return resp.data;
+};
+
+const ensureValidTokenForUser = async (user: {
+  id: string;
+  stravaAccessToken: string | null;
+  stravaRefreshToken: string | null;
+  stravaTokenExpiresAt: number | null;
+}) => {
+  if (!user.stravaAccessToken || !user.stravaRefreshToken) {
+    throw new Error("Strava account is not connected for this user");
+  }
+
+  if (!shouldRefreshToken(user.stravaTokenExpiresAt)) {
+    return user.stravaAccessToken;
+  }
+
+  const refreshed = await refreshStravaAccessToken(user.stravaRefreshToken);
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      stravaAccessToken: refreshed.access_token,
+      stravaRefreshToken: refreshed.refresh_token,
+      stravaTokenExpiresAt: refreshed.expires_at,
+    },
+  });
+  return refreshed.access_token;
+};
+
+export const getValidStravaAccessTokenByUserId = async (userId: string) => {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    throw new Error("User not found");
+  }
+  return ensureValidTokenForUser(user);
+};
+
+export const getValidStravaAccessTokenByStravaId = async (stravaId: bigint) => {
+  const user = await prisma.user.findUnique({ where: { stravaId } });
+  if (!user) {
+    return null;
+  }
+  const accessToken = await ensureValidTokenForUser(user);
+  return { user, accessToken };
+};
 
 export const getDetailedActivity = async (
   activityId: number,

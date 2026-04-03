@@ -1,21 +1,23 @@
 import { PrismaClient } from "@prisma/client";
 import axios from "axios";
+import { getValidStravaAccessTokenByUserId } from "../services/strava.service";
 
 const prisma = new PrismaClient();
 
 async function importHistory(userId: string) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user?.stravaAccessToken) {
+  if (!user) {
     console.error("❌ Utilisateur introuvable ou Token Strava manquant.");
     return;
   }
 
   try {
+    const listToken = await getValidStravaAccessTokenByUserId(userId);
     console.log("🚴‍♂️ Récupération de la liste des activités...");
     const res = await axios.get(
       "https://www.strava.com/api/v3/athlete/activities?per_page=30",
       {
-        headers: { Authorization: `Bearer ${user.stravaAccessToken}` },
+        headers: { Authorization: `Bearer ${listToken}` },
       },
     );
 
@@ -29,10 +31,11 @@ async function importHistory(userId: string) {
       }
 
       console.log(`🔍 Fetch des détails pour l'activité ${act.id}...`);
+      const detailToken = await getValidStravaAccessTokenByUserId(userId);
       const detail = await axios.get(
         `https://www.strava.com/api/v3/activities/${act.id}`,
         {
-          headers: { Authorization: `Bearer ${user.stravaAccessToken}` },
+          headers: { Authorization: `Bearer ${detailToken}` },
         },
       );
 
@@ -63,4 +66,4 @@ async function importHistory(userId: string) {
 }
 
 // Remplace par ton ID utilisateur (celui généré par la BDD)
-importHistory("TON_USER_ID_ICI");
+importHistory("");

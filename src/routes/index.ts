@@ -9,6 +9,8 @@ import * as dash from "../controllers/dashboard.controller";
 export const router = Router();
 
 // Auth & Webhooks
+router.get("/auth/strava/url", auth.getStravaAuthUrl);
+router.get("/auth/strava/callback", auth.stravaCallback);
 router.post("/auth/strava", auth.stravaLogin);
 router.get("/strava/webhook", strava.verifyWebhook);
 router.post("/strava/webhook", strava.handleWebhook);

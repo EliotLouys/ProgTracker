@@ -43,6 +43,8 @@ const meal = __importStar(require("../controllers/meal.controller"));
 const dash = __importStar(require("../controllers/dashboard.controller"));
 exports.router = (0, express_1.Router)();
 // Auth & Webhooks
+exports.router.get("/auth/strava/url", auth.getStravaAuthUrl);
+exports.router.get("/auth/strava/callback", auth.stravaCallback);
 exports.router.post("/auth/strava", auth.stravaLogin);
 exports.router.get("/strava/webhook", strava.verifyWebhook);
 exports.router.post("/strava/webhook", strava.handleWebhook);

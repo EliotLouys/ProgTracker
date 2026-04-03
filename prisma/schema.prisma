@@ -14,6 +14,7 @@ model User {
   stravaId            BigInt?    @unique
   stravaRefreshToken  String?
   stravaAccessToken   String?
+  stravaTokenExpiresAt  Int?       // Timestamp d'expiration en secondes
   
   activities          Activity[]
   meals               MealLog[]
