@@ -1,5 +1,8 @@
 # Build stage
 FROM node:22-alpine AS builder
+RUN apk add --no-cache openssl
+
+
 WORKDIR /app
 # Indispensable pour Prisma sur Alpine
 RUN apk add --no-cache libc6-compat
