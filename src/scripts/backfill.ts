@@ -2,7 +2,6 @@ import axios from "axios";
 import { getValidStravaAccessTokenByUserId } from "../services/strava.service";
 import { prisma } from "../lib/prisma";
 
-
 export async function importHistory(userId: string) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
@@ -14,7 +13,7 @@ export async function importHistory(userId: string) {
     const listToken = await getValidStravaAccessTokenByUserId(userId);
     console.log("🚴‍♂️ Récupération de la liste des activités...");
     const res = await axios.get(
-      "https://www.strava.com/api/v3/athlete/activities?per_page=30",
+      "https://www.strava.com/api/v3/athlete/activities?per_page=100",
       {
         headers: { Authorization: `Bearer ${listToken}` },
       },
@@ -56,14 +55,9 @@ export async function importHistory(userId: string) {
     console.log("🎉 Backfill terminé !");
   } catch (error: any) {
     const message = error.response?.data || error.message;
-    console.error(
-      "Erreur lors du backfill:",
-      message,
-    );
+    console.error("Erreur lors du backfill:", message);
     throw new Error(
       typeof message === "string" ? message : JSON.stringify(message),
     );
   }
 }
-
-

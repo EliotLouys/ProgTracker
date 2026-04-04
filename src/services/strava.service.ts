@@ -107,3 +107,66 @@ export const getDetailedActivity = async (
   );
   return resp.data;
 };
+
+export const initStravaWebhook = async () => {
+  const clientId = process.env.STRAVA_CLIENT_ID;
+  const clientSecret = process.env.STRAVA_CLIENT_SECRET;
+  const verifyToken = process.env.STRAVA_WEBHOOK_VERIFY_TOKEN;
+  const publicUrl = process.env.APP_PUBLIC_URL;
+
+  if (!clientId || !clientSecret || !verifyToken || !publicUrl) {
+    console.warn(
+      "Variables d'environnement manquantes, initialisation du webhook Strava ignorée.",
+    );
+    return;
+  }
+
+  const callbackUrl = `${publicUrl}/api/strava/webhook`;
+
+  try {
+    // 1. Récupérer l'abonnement actif
+    const { data: subscriptions } = await axios.get(
+      "https://www.strava.com/api/v3/push_subscriptions",
+      {
+        params: { client_id: clientId, client_secret: clientSecret },
+      },
+    );
+
+    if (subscriptions.length > 0) {
+      const currentSub = subscriptions[0];
+
+      // Si l'URL est déjà la bonne, on ne touche à rien
+      if (currentSub.callback_url === callbackUrl) {
+        console.log(`Webhook Strava déjà actif sur : ${callbackUrl}`);
+        return;
+      }
+
+      // Si l'URL a changé (ex: nouveau Ngrok), on supprime l'ancien
+      console.log(
+        `🔄 URL différente détectée. Suppression de l'abonnement ID: ${currentSub.id}`,
+      );
+      await axios.delete(
+        `https://www.strava.com/api/v3/push_subscriptions/${currentSub.id}`,
+        {
+          params: { client_id: clientId, client_secret: clientSecret },
+        },
+      );
+    }
+
+    // 2. Créer le nouvel abonnement
+    console.log(`🚀 Création du webhook Strava sur : ${callbackUrl}`);
+    await axios.post("https://www.strava.com/api/v3/push_subscriptions", {
+      client_id: clientId,
+      client_secret: clientSecret,
+      callback_url: callbackUrl,
+      verify_token: verifyToken,
+    });
+
+    console.log("✅ Abonnement Webhook Strava initialisé avec succès.");
+  } catch (error: any) {
+    console.error(
+      "❌ Échec de l'initialisation du webhook Strava :",
+      error.response?.data || error.message,
+    );
+  }
+};
