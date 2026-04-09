@@ -8,12 +8,18 @@ import {
 import { importHistory } from "../scripts/backfill";
 
 export const verifyWebhook = (req: Request, res: Response) => {
+  const mode = req.query["hub.mode"];
+  const token = req.query["hub.verify_token"];
   const challenge = req.query["hub.challenge"];
-  if (
-    req.query["hub.verify_token"] === process.env.STRAVA_WEBHOOK_VERIFY_TOKEN
-  ) {
+
+  console.log(`[Strava Webhook] Verification request: mode=${mode}, token=${token}`);
+
+  if (mode === "subscribe" && token === process.env.STRAVA_WEBHOOK_VERIFY_TOKEN) {
+    console.log("[Strava Webhook] WEBHOOK_VERIFIED");
     return res.status(200).json({ "hub.challenge": challenge });
   }
+
+  console.error("[Strava Webhook] Verification failed: token mismatch");
   res.sendStatus(403);
 };
 

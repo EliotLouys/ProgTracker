@@ -16,8 +16,28 @@ model User {
   stravaAccessToken   String?
   stravaTokenExpiresAt  Int?       // Timestamp d'expiration en secondes
   
+  // Profil Physique pour le calcul des calories naturelles
+  weightKg            Float?
+  heightCm            Float?
+  age                 Int?
+  gender              Gender?    @default(MALE)
+  activityLevel       ActivityLevel? @default(SEDENTARY)
+
   activities          Activity[]
   meals               MealLog[]
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum ActivityLevel {
+  SEDENTARY       // 1.2
+  LIGHTLY_ACTIVE  // 1.375
+  MODERATELY_ACTIVE // 1.55
+  VERY_ACTIVE      // 1.725
+  EXTRA_ACTIVE     // 1.9
 }
 
 // --- CALORIES OUT (STRAVA) ---
@@ -57,6 +77,7 @@ model MealLog {
   source           DataSource 
   externalId       String?  // Le code barre OFF (string) ou le code CIQUAL (converti en string)
   
+  mealType         MealType @default(SNACK)
   quantityGrams    Float    // Quantité ingérée
   totalCalories    Float    // Calculé au moment de l'insertion (quantity * kcalPer100g / 100)
   
@@ -69,4 +90,11 @@ enum DataSource {
   OPEN_FOOD_FACTS
   CIQUAL
   CUSTOM // Au cas où l'utilisateur ajoute un repas manuellement
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
 }

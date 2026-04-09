@@ -92,10 +92,37 @@ export const stravaCallback = async (req: Request, res: Response) => {
     ) as AuthStatePayload;
     const { token, user, athlete } = await upsertUserFromStravaCode(code);
     if (decoded.appRedirectUri) {
-      const target = new URL(decoded.appRedirectUri);
-      target.searchParams.set("token", token);
-      target.searchParams.set("firstname", athlete.firstname || "");
-      return res.redirect(target.toString());
+      const finalUrl = `${decoded.appRedirectUri}?token=${token}&firstname=${encodeURIComponent(athlete.firstname || "")}`;
+
+      return res.send(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+              body { font-family: -apple-system, system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f3f4f6; }
+              .card { background: white; padding: 2rem; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); text-align: center; }
+              .btn { margin-top: 1rem; display: inline-block; background: #fc4c02; color: white; padding: 0.75rem 1.5rem; border-radius: 0.5rem; text-decoration: none; font-weight: bold; }
+            </style>
+          </head>
+          <body>
+            <div class="card">
+              <p>Connexion réussie !</p>
+              <p>Redirection vers Velotaf Dashboard...</p>
+              <a href="${finalUrl}" class="btn">Ouvrir l'application</a>
+            </div>
+            <script>
+              // Tentative de redirection automatique
+              window.location.replace("${finalUrl}");
+              
+              // Second essai après un court délai
+              setTimeout(function() {
+                window.location.href = "${finalUrl}";
+              }, 1000);
+            </script>
+          </body>
+        </html>
+      `);
     }
 
     res.json({ token, user: { id: user.id, firstname: athlete.firstname } });
@@ -118,4 +145,42 @@ export const stravaLogin = async (req: Request, res: Response) => {
   } catch (err) {
     res.status(500).json({ error: "Auth failed" });
   }
+};
+
+import { AuthRequest } from "../middlewares/auth.middleware";
+
+export const getProfile = async (req: AuthRequest, res: Response) => {
+  if (!req.userId) return res.sendStatus(401);
+  const user = await prisma.user.findUnique({ where: { id: req.userId } });
+  if (!user) return res.status(404).json({ error: "User not found" });
+  res.json({
+    weightKg: user.weightKg,
+    heightCm: user.heightCm,
+    age: user.age,
+    gender: user.gender,
+    activityLevel: user.activityLevel,
+  });
+};
+
+export const updateProfile = async (req: AuthRequest, res: Response) => {
+  if (!req.userId) return res.sendStatus(401);
+  const { weightKg, heightCm, age, gender, activityLevel } = req.body;
+  const user = await prisma.user.update({
+    where: { id: req.userId },
+    data: { 
+      weightKg: weightKg ? parseFloat(weightKg) : null, 
+      heightCm: heightCm ? parseFloat(heightCm) : null, 
+      age: age ? parseInt(age) : null, 
+      gender, 
+      activityLevel 
+    },
+  });
+  
+  // BigInt serialization fix
+  const responseData = {
+    ...user,
+    stravaId: user.stravaId?.toString()
+  };
+  
+  res.json(responseData);
 };
