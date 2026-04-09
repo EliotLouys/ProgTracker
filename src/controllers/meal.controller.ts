@@ -22,27 +22,33 @@ export const logMeal = async (req: AuthRequest, res: Response) => {
 
 export const getMeals = async (req: AuthRequest, res: Response) => {
   if (!req.userId) return res.sendStatus(401);
-  const { date } = req.query;
+  const { date, startDate, endDate } = req.query;
   
-  let startOfDay: Date;
-  if (date) {
+  let startRange: Date;
+  let endRange: Date;
+
+  if (startDate && endDate) {
+    startRange = new Date(startDate as string);
+    endRange = new Date(endDate as string);
+  } else if (date) {
     // On force l'interprétation en date locale (YYYY, MM-1, DD)
     const [y, m, d] = (date as string).split('-').map(Number);
-    startOfDay = new Date(y, m - 1, d, 0, 0, 0, 0);
+    startRange = new Date(y, m - 1, d, 0, 0, 0, 0);
+    endRange = new Date(startRange);
+    endRange.setHours(23, 59, 59, 999);
   } else {
-    startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
+    startRange = new Date();
+    startRange.setHours(0, 0, 0, 0);
+    endRange = new Date(startRange);
+    endRange.setHours(23, 59, 59, 999);
   }
-  
-  const endOfDay = new Date(startOfDay);
-  endOfDay.setHours(23, 59, 59, 999);
 
   const meals = await prisma.mealLog.findMany({
     where: {
       userId: req.userId,
       consumedAt: {
-        gte: startOfDay,
-        lte: endOfDay,
+        gte: startRange,
+        lte: endRange,
       },
     },
     orderBy: { consumedAt: "asc" },

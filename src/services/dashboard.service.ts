@@ -29,11 +29,16 @@ export const getDashboardStats = async (userId: string, startDate?: string, endD
   const hourlyNaturalBurn = calculateHourlyNaturalBurn(user);
 
   // Normalisation des dates pour couvrir toute la journée du début à la fin
+  // Si on reçoit un ISO complet du frontend, on le respecte tel quel
   const start = startDate ? new Date(startDate) : new Date();
-  start.setHours(0, 0, 0, 0);
+  if (!startDate || !startDate.includes('T')) {
+    start.setHours(0, 0, 0, 0);
+  }
   
   const end = endDate ? new Date(endDate) : new Date();
-  end.setHours(23, 59, 59, 999);
+  if (!endDate || !endDate.includes('T')) {
+    end.setHours(23, 59, 59, 999);
+  }
 
   // Debug: voir ce qu'on demande
   console.log(`[DashboardService] Query range: ${start.toISOString()} to ${end.toISOString()}`);
@@ -91,15 +96,11 @@ export const getDashboardStats = async (userId: string, startDate?: string, endD
 
   // 4. Daily Breakdown pour le graphique
   const dailyStats = [];
-  const numDays = Math.ceil(diffHours / 24);
+  const numDays = Math.max(1, Math.round(diffHours / 24));
 
   for (let i = 0; i < numDays; i++) {
-    const dayStart = new Date(start);
-    dayStart.setDate(start.getDate() + i);
-    dayStart.setHours(0, 0, 0, 0);
-    
-    const dayEnd = new Date(dayStart);
-    dayEnd.setHours(23, 59, 59, 999);
+    const dayStart = new Date(start.getTime() + (i * 24 * 3600 * 1000));
+    const dayEnd = new Date(dayStart.getTime() + (23 * 3600 * 1000) + (59 * 60 * 1000) + 999);
 
     const dayActivitiesAll = allActivities.filter(a => {
       const d = new Date(a.startDate);
