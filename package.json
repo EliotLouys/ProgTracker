@@ -9,7 +9,8 @@
     "build": "tsc",
     "prisma:generate": "prisma generate",
     "prisma:studio": "prisma studio",
-    "seed:backfill": "npx tsx src/scripts/backfill.ts"
+    "seed:backfill": "npx tsx src/scripts/backfill.ts",
+    "seed:backfill-fatsecret": "npx tsx src/scripts/import-fatsecret.ts prisma/Journal_Alimentaire_mars_2026.csv 75463951-5212-44f1-8d25-8eefadf7b8af && npx tsx src/scripts/import-fatsecret.ts prisma/Journal_Alimentaire_avril_2026.csv 75463951-5212-44f1-8d25-8eefadf7b8af"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
