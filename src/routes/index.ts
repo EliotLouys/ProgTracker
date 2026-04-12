@@ -21,8 +21,15 @@ router.post("/strava/backfill", authenticateToken, strava.stravaBackfill);
 // Protected
 router.get("/dashboard", authenticateToken, dash.getDashboard);
 router.get("/activities", authenticateToken, dash.getActivities);
+
+// Food & Search
 router.get("/food/barcode/:code", authenticateToken, food.getByBarcode);
-router.get("/food/search", authenticateToken, food.searchCiqual);
+router.get("/food/search", authenticateToken, food.searchFood);
+router.get("/food/custom", authenticateToken, food.listCustomFoods);
+router.post("/food/custom", authenticateToken, food.createCustomFood);
+router.delete("/food/custom/:id", authenticateToken, food.deleteCustomFood);
+
+// Meals
 router.get("/meals", authenticateToken, meal.getMeals);
 router.post("/meals/log", authenticateToken, meal.logMeal);
 router.delete("/meals/:id", authenticateToken, meal.deleteMeal);

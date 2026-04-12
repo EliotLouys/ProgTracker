@@ -25,6 +25,22 @@ model User {
 
   activities          Activity[]
   meals               MealLog[]
+  customFoods         CustomFood[]
+}
+
+model CustomFood {
+  id               String   @id @default(uuid())
+  userId           String
+  name             String
+  kcalPer100g      Float
+  proteins         Float?
+  carbs            Float?
+  fats             Float?
+  createdAt        DateTime @default(now())
+
+  user             User     @relation(fields: [userId], references: [id])
+  
+  @@index([userId, name])
 }
 
 enum Gender {
@@ -89,7 +105,8 @@ model MealLog {
 enum DataSource {
   OPEN_FOOD_FACTS
   CIQUAL
-  CUSTOM // Au cas où l'utilisateur ajoute un repas manuellement
+  CUSTOM
+  USER_FOOD
 }
 
 enum MealType {

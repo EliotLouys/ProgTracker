@@ -5,14 +5,15 @@ import * as dashboardService from "../services/dashboard.service";
 
 export const getDashboard = async (req: AuthRequest, res: Response) => {
   if (!req.userId) return res.sendStatus(401);
-  const { startDate, endDate, sport } = req.query;
+  const { startDate, endDate, sport, excludeFuture } = req.query;
 
   try {
     const stats = await dashboardService.getDashboardStats(
       req.userId,
       startDate as string,
       endDate as string,
-      sport as string
+      sport as string,
+      excludeFuture === 'true'
     );
     return res.json(stats);
   } catch (error: any) {

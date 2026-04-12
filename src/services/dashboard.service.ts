@@ -22,7 +22,7 @@ const calculateHourlyNaturalBurn = (user: any) => {
   return (bmr * multiplier) / 24;
 };
 
-export const getDashboardStats = async (userId: string, startDate?: string, endDate?: string, sport?: string) => {
+export const getDashboardStats = async (userId: string, startDate?: string, endDate?: string, sport?: string, excludeFuture?: boolean) => {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw new Error("User not found");
 
@@ -35,13 +35,20 @@ export const getDashboardStats = async (userId: string, startDate?: string, endD
     start.setHours(0, 0, 0, 0);
   }
   
-  const end = endDate ? new Date(endDate) : new Date();
+  let end = endDate ? new Date(endDate) : new Date();
   if (!endDate || !endDate.includes('T')) {
     end.setHours(23, 59, 59, 999);
   }
 
+  // Si on veut exclure le futur, on plafonne la date de fin à "maintenant"
+  const now = new Date();
+  if (excludeFuture && end > now) {
+    console.log(`[DashboardService] Capping end date from ${end.toISOString()} to ${now.toISOString()}`);
+    end = now;
+  }
+
   // Debug: voir ce qu'on demande
-  console.log(`[DashboardService] Query range: ${start.toISOString()} to ${end.toISOString()}`);
+  console.log(`[DashboardService] Query range: ${start.toISOString()} to ${end.toISOString()} (excludeFuture: ${excludeFuture})`);
 
   // Types Strava
   const getSportTypes = (s: any): string[] | undefined => {
