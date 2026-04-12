@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { router } from "./routes";
+import { initStravaWebhook } from "./services/strava.service";
 
 dotenv.config();
 
@@ -17,14 +18,19 @@ app.use((req, res, next) => {
 
 app.use("/api", router);
 
-// Correction du type pour TypeScript : on force la conversion en nombre
 const PORT = Number(process.env.PORT) || 3000;
 
-// On écoute sur '0.0.0.0' pour être accessible depuis le réseau local
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', async () => {
   console.log(`-----------------------------------------------`);
   console.log(`🚀 Serveur Velotaf prêt sur le port ${PORT}`);
   console.log(`🔗 Accessible en local via : http://localhost:${PORT}`);
   console.log(`🌐 Accessible sur le réseau via ton IP locale`);
   console.log(`-----------------------------------------------`);
+
+  // RÉACTIVATION DU WEBHOOK STRAVA AU DÉMARRAGE
+  try {
+    await initStravaWebhook();
+  } catch (err) {
+    console.error("Erreur lors de l'init du webhook Strava:", err);
+  }
 });
