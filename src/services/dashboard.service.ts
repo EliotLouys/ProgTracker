@@ -22,7 +22,13 @@ const calculateHourlyNaturalBurn = (user: any) => {
   return (bmr * multiplier) / 24;
 };
 
-export const getDashboardStats = async (userId: string, startDate?: string, endDate?: string, sport?: string, excludeFuture?: boolean) => {
+export const getDashboardStats = async (
+  userId: string,
+  startDate?: string,
+  endDate?: string,
+  sport?: string,
+  excludeFuture?: boolean,
+) => {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw new Error("User not found");
 
@@ -31,30 +37,35 @@ export const getDashboardStats = async (userId: string, startDate?: string, endD
   // Normalisation des dates pour couvrir toute la journée du début à la fin
   // Si on reçoit un ISO complet du frontend, on le respecte tel quel
   const start = startDate ? new Date(startDate) : new Date();
-  if (!startDate || !startDate.includes('T')) {
+  if (!startDate || !startDate.includes("T")) {
     start.setHours(0, 0, 0, 0);
   }
-  
+
   let end = endDate ? new Date(endDate) : new Date();
-  if (!endDate || !endDate.includes('T')) {
+  if (!endDate || !endDate.includes("T")) {
     end.setHours(23, 59, 59, 999);
   }
 
   // Si on veut exclure le futur, on plafonne la date de fin à "maintenant"
   const now = new Date();
   if (excludeFuture && end > now) {
-    console.log(`[DashboardService] Capping end date from ${end.toISOString()} to ${now.toISOString()}`);
+    console.log(
+      `[DashboardService] Capping end date from ${end.toISOString()} to ${now.toISOString()}`,
+    );
     end = now;
   }
 
   // Debug: voir ce qu'on demande
-  console.log(`[DashboardService] Query range: ${start.toISOString()} to ${end.toISOString()} (excludeFuture: ${excludeFuture})`);
+  console.log(
+    `[DashboardService] Query range: ${start.toISOString()} to ${end.toISOString()} (excludeFuture: ${excludeFuture})`,
+  );
 
   // Types Strava
   const getSportTypes = (s: any): string[] | undefined => {
     if (!s || s === "all") return undefined;
     if (s === "Ride") return ["Ride", "EBikeRide", "VirtualRide"];
-    if (s === "Workout") return ["Workout", "WeightTraining", "Crossfit", "Weightlifting", "Yoga"];
+    if (s === "Workout")
+      return ["Workout", "WeightTraining", "Crossfit", "Weightlifting", "Yoga"];
     if (s === "Run") return ["Run", "VirtualRun"];
     if (s === "Walk") return ["Walk"];
     return [s];
@@ -62,37 +73,51 @@ export const getDashboardStats = async (userId: string, startDate?: string, endD
 
   const selectedTypes = getSportTypes(sport);
 
-  // 1. Récupérer TOUTES les activités de l'utilisateur (sans filtre de date d'abord pour debug si besoin, 
+  // 1. Récupérer TOUTES les activités de l'utilisateur (sans filtre de date d'abord pour debug si besoin,
   // mais restons sur le filtre en étant plus large)
   const allActivities = await prisma.activity.findMany({
-    where: { 
-      userId, 
-      startDate: { 
-        gte: start, 
-        lte: end 
-      } 
-    }
+    where: {
+      userId,
+      startDate: {
+        gte: start,
+        lte: end,
+      },
+    },
   });
 
-  console.log(`[DashboardService] Found ${allActivities.length} total activities in DB for this range.`);
+  console.log(
+    `[DashboardService] Found ${allActivities.length} total activities in DB for this range.`,
+  );
   if (allActivities.length > 0) {
-    console.log(`[DashboardService] Sample activity types: ${allActivities.slice(0, 3).map(a => a.type).join(', ')}`);
+    console.log(
+      `[DashboardService] Sample activity types: ${allActivities
+        .slice(0, 3)
+        .map((a) => a.type)
+        .join(", ")}`,
+    );
   }
 
   // 2. Filtrer pour les calories actives
-  const filteredActivities = selectedTypes 
-    ? allActivities.filter(a => selectedTypes.includes(a.type))
+  const filteredActivities = selectedTypes
+    ? allActivities.filter((a) => selectedTypes.includes(a.type))
     : allActivities;
 
-  const activeBurnedTotal = filteredActivities.reduce((sum, a) => sum + (a.calories || 0), 0);
-  const totalMovingTimeSeconds = allActivities.reduce((sum, a) => sum + a.movingTime, 0);
-  
+  const activeBurnedTotal = filteredActivities.reduce(
+    (sum, a) => sum + (a.calories || 0),
+    0,
+  );
+  const totalMovingTimeSeconds = allActivities.reduce(
+    (sum, a) => sum + a.movingTime,
+    0,
+  );
+
   // Calcul de la durée de la période
   const diffMs = end.getTime() - start.getTime();
   const diffHours = Math.max(24, diffMs / (1000 * 3600));
-  
+
   // Natural burn : on retire le temps passé en activité (toutes activités confondues)
-  const naturalBurnTotal = hourlyNaturalBurn * Math.max(0, diffHours - (totalMovingTimeSeconds / 3600));
+  const naturalBurnTotal =
+    hourlyNaturalBurn * Math.max(0, diffHours - totalMovingTimeSeconds / 3600);
 
   // 3. Calories consommées (repas)
   const mealsSum = await prisma.mealLog.aggregate({
@@ -106,20 +131,26 @@ export const getDashboardStats = async (userId: string, startDate?: string, endD
   const numDays = Math.max(1, Math.round(diffHours / 24));
 
   for (let i = 0; i < numDays; i++) {
-    const dayStart = new Date(start.getTime() + (i * 24 * 3600 * 1000));
-    const dayEnd = new Date(dayStart.getTime() + (23 * 3600 * 1000) + (59 * 60 * 1000) + 999);
+    const dayStart = new Date(start.getTime() + i * 24 * 3600 * 1000);
+    const dayEnd = new Date(
+      dayStart.getTime() + 23 * 3600 * 1000 + 59 * 60 * 1000 + 999,
+    );
 
-    const dayActivitiesAll = allActivities.filter(a => {
+    const dayActivitiesAll = allActivities.filter((a) => {
       const d = new Date(a.startDate);
       return d >= dayStart && d <= dayEnd;
     });
 
     const dayActivitiesFiltered = selectedTypes
-      ? dayActivitiesAll.filter(a => selectedTypes.includes(a.type))
+      ? dayActivitiesAll.filter((a) => selectedTypes.includes(a.type))
       : dayActivitiesAll;
 
-    const dayActiveKcal = dayActivitiesFiltered.reduce((sum, a) => sum + (a.calories || 0), 0);
-    const dayActiveTime = dayActivitiesAll.reduce((sum, a) => sum + a.movingTime, 0) / 3600;
+    const dayActiveKcal = dayActivitiesFiltered.reduce(
+      (sum, a) => sum + (a.calories || 0),
+      0,
+    );
+    const dayActiveTime =
+      dayActivitiesAll.reduce((sum, a) => sum + a.movingTime, 0) / 3600;
     const dayNaturalKcal = hourlyNaturalBurn * Math.max(0, 24 - dayActiveTime);
 
     const dayMealsKcal = await prisma.mealLog.aggregate({
@@ -136,7 +167,9 @@ export const getDashboardStats = async (userId: string, startDate?: string, endD
     });
   }
 
-  console.log(`[DashboardService] Final Stats -> Sport: ${sport || 'all'}, Active: ${activeBurnedTotal}, Natural: ${naturalBurnTotal}`);
+  console.log(
+    `[DashboardService] Final Stats -> Sport: ${sport || "all"}, Active: ${activeBurnedTotal}, Natural: ${naturalBurnTotal}`,
+  );
 
   return {
     burned: activeBurnedTotal + naturalBurnTotal,
@@ -144,6 +177,6 @@ export const getDashboardStats = async (userId: string, startDate?: string, endD
     naturalBurned: naturalBurnTotal,
     consumed: consumedTotal,
     net: consumedTotal - (activeBurnedTotal + naturalBurnTotal),
-    dailyStats
+    dailyStats,
   };
 };
