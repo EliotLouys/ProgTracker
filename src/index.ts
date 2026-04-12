@@ -17,7 +17,8 @@ app.use((req, res, next) => {
 
 app.use("/api", router);
 
-const PORT = process.env.PORT || 3000;
+// Correction du type pour TypeScript : on force la conversion en nombre
+const PORT = Number(process.env.PORT) || 3000;
 
 // On écoute sur '0.0.0.0' pour être accessible depuis le réseau local
 app.listen(PORT, '0.0.0.0', () => {
