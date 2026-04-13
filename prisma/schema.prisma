@@ -26,12 +26,14 @@ model User {
   activities          Activity[]
   meals               MealLog[]
   customFoods         CustomFood[]
+  recipes             Recipe[]
 }
 
 model CustomFood {
   id               String   @id @default(uuid())
   userId           String
   name             String
+  barcode          String?
   kcalPer100g      Float
   proteins         Float?
   carbs            Float?
@@ -39,8 +41,38 @@ model CustomFood {
   createdAt        DateTime @default(now())
 
   user             User     @relation(fields: [userId], references: [id])
+
+  @@index([userId, name])
+  @@index([userId, barcode])
+}
+
+model Recipe {
+  id               String   @id @default(uuid())
+  userId           String
+  name             String
+  kcalPer100g      Float    @default(0)
+  proteins         Float?
+  carbs            Float?
+  fats             Float?
+  createdAt        DateTime @default(now())
+
+  user             User     @relation(fields: [userId], references: [id])
+  ingredients      RecipeIngredient[]
   
   @@index([userId, name])
+}
+
+model RecipeIngredient {
+  id               String   @id @default(uuid())
+  recipeId         String
+  name             String   // Nom de l'ingrédient
+  kcalPer100g      Float
+  proteins         Float?
+  carbs            Float?
+  fats             Float?
+  quantityGrams    Float    // Quantité dans cette recette
+  
+  recipe           Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
 }
 
 enum Gender {
@@ -107,6 +139,7 @@ enum DataSource {
   CIQUAL
   CUSTOM
   USER_FOOD
+  RECIPE
 }
 
 enum MealType {

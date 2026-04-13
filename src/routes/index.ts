@@ -29,6 +29,11 @@ router.get("/food/custom", authenticateToken, food.listCustomFoods);
 router.post("/food/custom", authenticateToken, food.createCustomFood);
 router.delete("/food/custom/:id", authenticateToken, food.deleteCustomFood);
 
+// Recipes
+router.get("/recipes", authenticateToken, food.listRecipes);
+router.post("/recipes", authenticateToken, food.createRecipe);
+router.delete("/recipes/:id", authenticateToken, food.deleteRecipe);
+
 // Meals
 router.get("/meals", authenticateToken, meal.getMeals);
 router.post("/meals/log", authenticateToken, meal.logMeal);
