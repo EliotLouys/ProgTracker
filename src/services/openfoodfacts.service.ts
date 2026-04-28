@@ -25,15 +25,17 @@ const getAuthParams = () => {
 
 export const fetchOFFProduct = async (barcode: string) => {
   try {
-    // API v2 pour la récupération d'un produit
-    const resp = await offApi.get(`/api/v2/product/${barcode}.json`, {
+    // API v0 est la plus stable pour la récupération d'un produit par code-barres
+    const resp = await offApi.get(`/api/v0/product/${barcode}.json`, {
       params: {
         fields: "product_name,nutriments,code",
         ...getAuthParams()
       }
     });
 
-    if (resp.data.status === "failure") return null;
+    if (!resp.data || resp.data.status === 0 || resp.data.status === "failure") {
+      return null;
+    }
     
     const p = resp.data.product;
     if (!p) return null;
@@ -46,28 +48,33 @@ export const fetchOFFProduct = async (barcode: string) => {
       fats: p.nutriments?.fat_100g || 0,
     };
   } catch (err: any) {
-    parseOFFError(err, "Fetch Barcode");
+    // Fail silently for the user but log for the dev
+    parseOFFError(err, `Fetch Barcode ${barcode}`);
     return null;
   }
 };
 
 export const searchOFFProducts = async (query: string) => {
+  if (!query || query.trim().length < 3) return [];
+
   try {
     /**
-     * API v2 Search
-     * Plus rapide et supporte mieux le filtrage
+     * Pour la recherche par mots-clés, cgi/search.pl reste la solution la plus fiable
+     * en attendant la stabilisation complète de l'API v3 (Search-a-licious).
      */
-    const resp = await offApi.get("/api/v2/search", {
+    const resp = await offApi.get("/cgi/search.pl", {
       params: {
-        categories_tags: "", // On cherche globalement
         search_terms: query,
+        search_simple: 1,
+        action: "process",
+        json: 1,
         fields: "code,product_name,nutriments",
         page_size: 10,
         ...getAuthParams()
       }
     });
 
-    if (!resp.data.products) return [];
+    if (!resp.data || !resp.data.products) return [];
 
     return resp.data.products
       .map((p: any) => ({
@@ -81,6 +88,7 @@ export const searchOFFProducts = async (query: string) => {
       }))
       .filter((p: any) => p.name);
   } catch (err: any) {
+    // Fail silently for the user but log for the dev
     parseOFFError(err, "Search Text");
     return [];
   }
