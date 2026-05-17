@@ -61,3 +61,14 @@ export async function importHistory(userId: string) {
     );
   }
 }
+
+if (require.main === module) {
+  const userId = process.argv[2] || process.env.USER_ID;
+  if (!userId) {
+    console.error("❌ Usage: npx tsx src/scripts/backfill.ts <userId> OR set USER_ID env var");
+    process.exit(1);
+  }
+  importHistory(userId)
+    .catch(console.error)
+    .finally(() => prisma.$disconnect());
+}

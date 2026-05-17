@@ -15,6 +15,8 @@ const buildApiJwt = (userId: string) => {
   });
 };
 
+import { encrypt } from "../lib/encryption";
+
 const upsertUserFromStravaCode = async (code: string) => {
   const resp = await exchangeStravaCode(code);
   const { access_token, refresh_token, expires_at, athlete } = resp;
@@ -26,14 +28,14 @@ const upsertUserFromStravaCode = async (code: string) => {
   const user = await prisma.user.upsert({
     where: { stravaId: BigInt(athlete.id) },
     update: {
-      stravaAccessToken: access_token,
-      stravaRefreshToken: refresh_token,
+      stravaAccessToken: encrypt(access_token),
+      stravaRefreshToken: encrypt(refresh_token),
       stravaTokenExpiresAt: expires_at,
     },
     create: {
       stravaId: BigInt(athlete.id),
-      stravaAccessToken: access_token,
-      stravaRefreshToken: refresh_token,
+      stravaAccessToken: encrypt(access_token),
+      stravaRefreshToken: encrypt(refresh_token),
       stravaTokenExpiresAt: expires_at,
     },
   });
@@ -159,12 +161,25 @@ export const getProfile = async (req: AuthRequest, res: Response) => {
     age: user.age,
     gender: user.gender,
     activityLevel: user.activityLevel,
+    proteinsGoal: user.proteinsGoal,
+    carbsGoal: user.carbsGoal,
+    fatsGoal: user.fatsGoal,
   });
 };
 
 export const updateProfile = async (req: AuthRequest, res: Response) => {
   if (!req.userId) return res.sendStatus(401);
-  const { weightKg, heightCm, age, gender, activityLevel } = req.body;
+  const { 
+    weightKg, 
+    heightCm, 
+    age, 
+    gender, 
+    activityLevel,
+    proteinsGoal,
+    carbsGoal,
+    fatsGoal
+  } = req.body;
+  
   const user = await prisma.user.update({
     where: { id: req.userId },
     data: { 
@@ -172,7 +187,10 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
       heightCm: heightCm ? parseFloat(heightCm) : null, 
       age: age ? parseInt(age) : null, 
       gender, 
-      activityLevel 
+      activityLevel,
+      proteinsGoal: proteinsGoal !== undefined && proteinsGoal !== null && proteinsGoal !== "" ? parseFloat(proteinsGoal) : null,
+      carbsGoal: carbsGoal !== undefined && carbsGoal !== null && carbsGoal !== "" ? parseFloat(carbsGoal) : null,
+      fatsGoal: fatsGoal !== undefined && fatsGoal !== null && fatsGoal !== "" ? parseFloat(fatsGoal) : null,
     },
   });
   

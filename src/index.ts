@@ -6,8 +6,33 @@ import { initStravaWebhook } from "./services/strava.service";
 
 dotenv.config();
 
+// VALIDATION DES VARIABLES D'ENVIRONNEMENT CRITIQUES
+const REQUIRED_ENV = ["JWT_SECRET", "DATABASE_URL", "STRAVA_CLIENT_ID", "STRAVA_CLIENT_SECRET"];
+const missingEnv = REQUIRED_ENV.filter((key) => !process.env[key]);
+
+if (missingEnv.length > 0) {
+  console.error(`❌ Erreur : Variables d'environnement manquantes : ${missingEnv.join(", ")}`);
+  process.exit(1);
+}
+
+if (process.env.JWT_SECRET === "undefined" || process.env.JWT_SECRET?.length! < 32) {
+  console.warn("⚠️ Attention : JWT_SECRET est absent ou trop court. Sécurité compromise.");
+}
+
 const app = express();
-app.use(cors());
+
+// CONFIGURATION CORS PLUS STRICTE
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || ["http://localhost:8081", "http://localhost:19006"];
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  }
+}));
+
 app.use(express.json());
 
 // LOGGER DE REQUÊTES : Pour voir ce qui arrive au serveur

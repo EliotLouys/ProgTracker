@@ -122,9 +122,17 @@ export const getDashboardStats = async (
   // 3. Calories consommées (repas)
   const mealsSum = await prisma.mealLog.aggregate({
     where: { userId, consumedAt: { gte: start, lte: end } },
-    _sum: { totalCalories: true },
+    _sum: { 
+      totalCalories: true,
+      proteins: true,
+      carbs: true,
+      fats: true,
+    },
   });
   const consumedTotal = mealsSum._sum.totalCalories || 0;
+  const consumedProteins = mealsSum._sum.proteins || 0;
+  const consumedCarbs = mealsSum._sum.carbs || 0;
+  const consumedFats = mealsSum._sum.fats || 0;
 
   // 4. Daily Breakdown pour le graphique
   const dailyStats = [];
@@ -155,7 +163,12 @@ export const getDashboardStats = async (
 
     const dayMealsKcal = await prisma.mealLog.aggregate({
       where: { userId, consumedAt: { gte: dayStart, lte: dayEnd } },
-      _sum: { totalCalories: true },
+      _sum: { 
+        totalCalories: true,
+        proteins: true,
+        carbs: true,
+        fats: true,
+      },
     });
 
     dailyStats.push({
@@ -176,6 +189,14 @@ export const getDashboardStats = async (
     activeBurned: activeBurnedTotal,
     naturalBurned: naturalBurnTotal,
     consumed: consumedTotal,
+    consumedProteins,
+    consumedCarbs,
+    consumedFats,
+    goals: {
+      proteins: user.proteinsGoal || 0,
+      carbs: user.carbsGoal || 0,
+      fats: user.fatsGoal || 0,
+    },
     net: consumedTotal - (activeBurnedTotal + naturalBurnTotal),
     dailyStats,
   };

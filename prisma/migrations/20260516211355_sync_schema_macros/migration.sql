@@ -1,0 +1,9 @@
+-- AlterTable
+ALTER TABLE "MealLog" ADD COLUMN     "carbs" DOUBLE PRECISION,
+ADD COLUMN     "fats" DOUBLE PRECISION,
+ADD COLUMN     "proteins" DOUBLE PRECISION;
+
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN     "carbsGoal" DOUBLE PRECISION,
+ADD COLUMN     "fatsGoal" DOUBLE PRECISION,
+ADD COLUMN     "proteinsGoal" DOUBLE PRECISION;

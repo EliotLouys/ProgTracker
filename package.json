@@ -9,6 +9,9 @@
     "build": "tsc",
     "prisma:generate": "prisma generate",
     "prisma:studio": "prisma studio",
+    "script:backfill": "tsx src/scripts/backfill.ts",
+    "script:import-fatsecret": "tsx src/scripts/import-fatsecret.ts",
+    "script:recover": "tsx src/scripts/recover-from-csv.ts",
     "seed:backfill": "npx tsx src/scripts/backfill.ts",
     "seed:backfill-fatsecret": "npx tsx src/scripts/import-fatsecret.ts prisma/Journal_Alimentaire_mars_2026.csv 75463951-5212-44f1-8d25-8eefadf7b8af && npx tsx src/scripts/import-fatsecret.ts prisma/Journal_Alimentaire_avril_2026.csv 75463951-5212-44f1-8d25-8eefadf7b8af"
   },
@@ -23,6 +26,7 @@
     "axios": "^1.14.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
+    "crypto-js": "^4.2.0",
     "csv-parse": "^6.2.1",
     "csv-parser": "^3.2.0",
     "dotenv": "^16.6.1",
@@ -32,6 +36,7 @@
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.13",
+    "@types/crypto-js": "^4.2.2",
     "@types/express": "^4.17.17",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20.4.0",

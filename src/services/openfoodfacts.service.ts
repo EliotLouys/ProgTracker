@@ -54,7 +54,7 @@ export const fetchOFFProduct = async (barcode: string) => {
   }
 };
 
-export const searchOFFProducts = async (query: string) => {
+export const searchOFFProducts = async (query: string, page = 1) => {
   if (!query || query.trim().length < 3) return [];
 
   try {
@@ -70,6 +70,7 @@ export const searchOFFProducts = async (query: string) => {
         json: 1,
         fields: "code,product_name,nutriments",
         page_size: 10,
+        page: page,
         ...getAuthParams()
       }
     });

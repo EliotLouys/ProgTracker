@@ -5,7 +5,19 @@ import { prisma } from "../lib/prisma";
 export const logMeal = async (req: AuthRequest, res: Response) => {
   if (!req.userId) return res.sendStatus(401);
   try {
-    const { name, kcalPer100g, quantityGrams, source, externalId, mealType, consumedAt } = req.body;
+    const { 
+      name, 
+      kcalPer100g, 
+      proteins, 
+      carbs, 
+      fats, 
+      quantityGrams, 
+      source, 
+      externalId, 
+      mealType, 
+      consumedAt 
+    } = req.body;
+
     const meal = await prisma.mealLog.create({
       data: {
         userId: req.userId,
@@ -14,6 +26,9 @@ export const logMeal = async (req: AuthRequest, res: Response) => {
         externalId: externalId ? String(externalId) : null,
         quantityGrams,
         totalCalories: (kcalPer100g * quantityGrams) / 100,
+        proteins: proteins ? (proteins * quantityGrams) / 100 : null,
+        carbs: carbs ? (carbs * quantityGrams) / 100 : null,
+        fats: fats ? (fats * quantityGrams) / 100 : null,
         mealType: mealType || "SNACK",
         consumedAt: consumedAt ? new Date(consumedAt) : new Date(),
       },

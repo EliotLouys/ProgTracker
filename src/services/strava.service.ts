@@ -1,5 +1,6 @@
 import axios from "axios";
 import { prisma } from "../lib/prisma";
+import { encrypt, decrypt } from "../lib/encryption";
 
 const STRAVA_OAUTH_TOKEN_URL = "https://www.strava.com/oauth/token";
 const TOKEN_EXPIRY_SAFETY_WINDOW_SECONDS = 60;
@@ -58,20 +59,23 @@ const ensureValidTokenForUser = async (user: {
   stravaRefreshToken: string | null;
   stravaTokenExpiresAt: number | null;
 }) => {
-  if (!user.stravaAccessToken || !user.stravaRefreshToken) {
+  const decryptedAccessToken = decrypt(user.stravaAccessToken);
+  const decryptedRefreshToken = decrypt(user.stravaRefreshToken);
+
+  if (!decryptedAccessToken || !decryptedRefreshToken) {
     throw new Error("Strava account is not connected for this user");
   }
 
   if (!shouldRefreshToken(user.stravaTokenExpiresAt)) {
-    return user.stravaAccessToken;
+    return decryptedAccessToken;
   }
 
-  const refreshed = await refreshStravaAccessToken(user.stravaRefreshToken);
+  const refreshed = await refreshStravaAccessToken(decryptedRefreshToken);
   await prisma.user.update({
     where: { id: user.id },
     data: {
-      stravaAccessToken: refreshed.access_token,
-      stravaRefreshToken: refreshed.refresh_token,
+      stravaAccessToken: encrypt(refreshed.access_token),
+      stravaRefreshToken: encrypt(refreshed.refresh_token),
       stravaTokenExpiresAt: refreshed.expires_at,
     },
   });

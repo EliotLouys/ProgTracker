@@ -60,20 +60,25 @@ export const searchFood = async (req: AuthRequest, res: Response) => {
   if (!req.userId) return res.sendStatus(401);
   const q = (req.query.q as string) || "";
   const includeRecipes = req.query.recipes === "true";
+  const page = parseInt(req.query.page as string) || 1;
+  const take = 10;
+  const skip = (page - 1) * take;
 
   try {
     const [ciqualResults, customResults, recipeResults, openFoodFactsResult] =
       await Promise.all([
         prisma.ciqualItem.findMany({
           where: { name: { contains: q, mode: "insensitive" } },
-          take: 10,
+          skip,
+          take,
         }),
         prisma.customFood.findMany({
           where: {
             userId: req.userId,
             name: { contains: q, mode: "insensitive" },
           },
-          take: 10,
+          skip,
+          take,
         }),
         includeRecipes
           ? prisma.recipe.findMany({
@@ -81,10 +86,11 @@ export const searchFood = async (req: AuthRequest, res: Response) => {
                 userId: req.userId,
                 name: { contains: q, mode: "insensitive" },
               },
-              take: 10,
+              skip,
+              take,
             })
           : (Promise.resolve([]) as Promise<Recipe[]>),
-        searchOFFProducts(q) as Promise<OFFProduct[]>,
+        searchOFFProducts(q, page) as Promise<OFFProduct[]>,
       ]);
 
     // Remove duplicates from OFF that are already in custom foods (via barcode)
@@ -223,6 +229,19 @@ export const deleteRecipe = async (req: AuthRequest, res: Response) => {
   }
 };
 
+export const deleteCustomFood = async (req: AuthRequest, res: Response) => {
+  if (!req.userId) return res.sendStatus(401);
+  try {
+    const { id } = req.params;
+    await prisma.customFood.delete({
+      where: { id, userId: req.userId },
+    });
+    res.sendStatus(204);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 export const listCustomFoods = async (req: AuthRequest, res: Response) => {
   if (!req.userId) return res.sendStatus(401);
   try {
@@ -258,14 +277,73 @@ export const createCustomFood = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const deleteCustomFood = async (req: AuthRequest, res: Response) => {
+export const updateCustomFood = async (req: AuthRequest, res: Response) => {
   if (!req.userId) return res.sendStatus(401);
   try {
     const { id } = req.params;
-    await prisma.customFood.delete({
+    const { name, kcalPer100g, proteins, carbs, fats, barcode } = req.body;
+
+    const food = await prisma.customFood.update({
       where: { id, userId: req.userId },
+      data: {
+        name,
+        barcode,
+        kcalPer100g: parseFloat(kcalPer100g) || 0,
+        proteins: proteins !== undefined ? parseFloat(proteins) : null,
+        carbs: carbs !== undefined ? parseFloat(carbs) : null,
+        fats: fats !== undefined ? parseFloat(fats) : null,
+      },
     });
-    res.sendStatus(204);
+    res.json(food);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const updateRecipe = async (req: AuthRequest, res: Response) => {
+  if (!req.userId) return res.sendStatus(401);
+  try {
+    const { id } = req.params;
+    const { name, ingredients } = req.body as { name: string; ingredients: IngredientInput[] };
+
+    // Calculate overall nutrition per 100g of the recipe
+    let totalKcal = 0;
+    let totalProteins = 0;
+    let totalCarbs = 0;
+    let totalFats = 0;
+    let totalWeight = 0;
+
+    for (const ing of ingredients) {
+      const weight = parseFloat(String(ing.quantityGrams)) || 0;
+      totalWeight += weight;
+      totalKcal += (ing.kcalPer100g * weight) / 100;
+      totalProteins += ((ing.proteins || 0) * weight) / 100;
+      totalCarbs += ((ing.carbs || 0) * weight) / 100;
+      totalFats += ((ing.fats || 0) * weight) / 100;
+    }
+
+    const kcalPer100g = totalWeight > 0 ? (totalKcal / totalWeight) * 100 : 0;
+    const proteins = totalWeight > 0 ? (totalProteins / totalWeight) * 100 : 0;
+    const carbs = totalWeight > 0 ? (totalCarbs / totalWeight) * 100 : 0;
+    const fats = totalWeight > 0 ? (totalFats / totalWeight) * 100 : 0;
+
+    // Update the recipe: delete old ingredients and create new ones (simplest approach)
+    const recipe = await prisma.recipe.update({
+      where: { id, userId: req.userId },
+      data: {
+        name,
+        kcalPer100g,
+        proteins,
+        carbs,
+        fats,
+        ingredients: {
+          deleteMany: {},
+          create: ingredients,
+        },
+      },
+      include: { ingredients: true },
+    });
+    res.json(recipe);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

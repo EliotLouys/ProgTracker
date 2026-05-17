@@ -23,6 +23,11 @@ model User {
   gender              Gender?    @default(MALE)
   activityLevel       ActivityLevel? @default(SEDENTARY)
 
+  // Objectifs nutritionnels (optionnels, sinon calculés par défaut)
+  proteinsGoal        Float?
+  carbsGoal           Float?
+  fatsGoal            Float?
+
   activities          Activity[]
   meals               MealLog[]
   customFoods         CustomFood[]
@@ -129,6 +134,10 @@ model MealLog {
   quantityGrams    Float    // Quantité ingérée
   totalCalories    Float    // Calculé au moment de l'insertion (quantity * kcalPer100g / 100)
   
+  proteins         Float?   // Total protéines pour ce repas
+  carbs            Float?   // Total glucides pour ce repas
+  fats             Float?   // Total lipides pour ce repas
+
   consumedAt       DateTime @default(now())
   
   user             User     @relation(fields: [userId], references: [id])

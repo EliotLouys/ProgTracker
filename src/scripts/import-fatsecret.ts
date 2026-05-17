@@ -16,10 +16,11 @@ const MONTHS_FR: Record<string, number> = {
 
 async function importFatSecret() {
   const filePath = process.argv[2];
-  const userId = process.argv[3];
+  const userId = process.argv[3] || process.env.USER_ID;
 
   if (!filePath || !userId) {
-    console.error("❌ Usage: npx tsx src/scripts/import-fatsecret.ts <fichier.csv> <userId>");
+    console.error("❌ Usage: npx tsx src/scripts/import-fatsecret.ts <fichier.csv> [userId]");
+    console.error("   Alternatively, set USER_ID environment variable.");
     process.exit(1);
   }
 
