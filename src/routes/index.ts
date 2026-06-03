@@ -27,12 +27,14 @@ router.get("/food/barcode/:code", authenticateToken, food.getByBarcode);
 router.get("/food/search", authenticateToken, food.searchFood);
 router.get("/food/custom", authenticateToken, food.listCustomFoods);
 router.post("/food/custom", authenticateToken, food.createCustomFood);
+router.put("/food/custom/:id", authenticateToken, food.updateCustomFood);
 router.delete("/food/custom/:id", authenticateToken, food.deleteCustomFood);
 
 // Recipes
 router.get("/recipes", authenticateToken, food.listRecipes);
 router.post("/recipes", authenticateToken, food.createRecipe);
 router.delete("/recipes/:id", authenticateToken, food.deleteRecipe);
+router.put("/recipes/:id", authenticateToken, food.updateRecipe);
 
 // Meals
 router.get("/meals", authenticateToken, meal.getMeals);
