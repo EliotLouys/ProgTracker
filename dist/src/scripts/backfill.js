@@ -16,7 +16,7 @@ async function importHistory(userId) {
     try {
         const listToken = await (0, strava_service_1.getValidStravaAccessTokenByUserId)(userId);
         console.log("🚴‍♂️ Récupération de la liste des activités...");
-        const res = await axios_1.default.get("https://www.strava.com/api/v3/athlete/activities?per_page=30", {
+        const res = await axios_1.default.get("https://www.strava.com/api/v3/athlete/activities?per_page=100", {
             headers: { Authorization: `Bearer ${listToken}` },
         });
         for (const act of res.data) {
@@ -54,4 +54,14 @@ async function importHistory(userId) {
         console.error("Erreur lors du backfill:", message);
         throw new Error(typeof message === "string" ? message : JSON.stringify(message));
     }
+}
+if (require.main === module) {
+    const userId = process.argv[2] || process.env.USER_ID;
+    if (!userId) {
+        console.error("❌ Usage: npx tsx src/scripts/backfill.ts <userId> OR set USER_ID env var");
+        process.exit(1);
+    }
+    importHistory(userId)
+        .catch(console.error)
+        .finally(() => prisma_1.prisma.$disconnect());
 }

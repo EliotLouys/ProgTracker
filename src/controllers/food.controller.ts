@@ -5,7 +5,12 @@ import {
   searchOFFProducts,
 } from "../services/openfoodfacts.service";
 import { AuthRequest } from "../middlewares/auth.middleware";
-import { Recipe, RecipeIngredient, CiqualItem, CustomFood } from "@prisma/client";
+import {
+  Recipe,
+  RecipeIngredient,
+  CiqualItem,
+  CustomFood,
+} from "@prisma/client";
 
 type RecipeWithIngredients = Recipe & { ingredients: RecipeIngredient[] };
 
@@ -173,7 +178,10 @@ interface IngredientInput {
 export const createRecipe = async (req: AuthRequest, res: Response) => {
   if (!req.userId) return res.sendStatus(401);
   try {
-    const { name, ingredients } = req.body as { name: string; ingredients: IngredientInput[] };
+    const { name, ingredients } = req.body as {
+      name: string;
+      ingredients: IngredientInput[];
+    };
 
     // Calculate overall nutrition per 100g of the recipe
     let totalKcal = 0;
@@ -205,7 +213,14 @@ export const createRecipe = async (req: AuthRequest, res: Response) => {
         carbs,
         fats,
         ingredients: {
-          create: ingredients,
+          create: ingredients.map((ing) => ({
+            name: ing.name,
+            kcalPer100g: parseFloat(String(ing.kcalPer100g)) || 0,
+            proteins: ing.proteins !== undefined && ing.proteins !== null ? parseFloat(String(ing.proteins)) : null,
+            carbs: ing.carbs !== undefined && ing.carbs !== null ? parseFloat(String(ing.carbs)) : null,
+            fats: ing.fats !== undefined && ing.fats !== null ? parseFloat(String(ing.fats)) : null,
+            quantityGrams: parseFloat(String(ing.quantityGrams)) || 0,
+          })),
         },
       },
       include: { ingredients: true },
@@ -304,7 +319,10 @@ export const updateRecipe = async (req: AuthRequest, res: Response) => {
   if (!req.userId) return res.sendStatus(401);
   try {
     const { id } = req.params;
-    const { name, ingredients } = req.body as { name: string; ingredients: IngredientInput[] };
+    const { name, ingredients } = req.body as {
+      name: string;
+      ingredients: IngredientInput[];
+    };
 
     // Calculate overall nutrition per 100g of the recipe
     let totalKcal = 0;
@@ -338,7 +356,14 @@ export const updateRecipe = async (req: AuthRequest, res: Response) => {
         fats,
         ingredients: {
           deleteMany: {},
-          create: ingredients,
+          create: ingredients.map((ing) => ({
+            name: ing.name,
+            kcalPer100g: parseFloat(String(ing.kcalPer100g)) || 0,
+            proteins: ing.proteins !== undefined && ing.proteins !== null ? parseFloat(String(ing.proteins)) : null,
+            carbs: ing.carbs !== undefined && ing.carbs !== null ? parseFloat(String(ing.carbs)) : null,
+            fats: ing.fats !== undefined && ing.fats !== null ? parseFloat(String(ing.fats)) : null,
+            quantityGrams: parseFloat(String(ing.quantityGrams)) || 0,
+          })),
         },
       },
       include: { ingredients: true },

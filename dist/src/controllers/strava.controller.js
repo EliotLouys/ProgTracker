@@ -5,10 +5,15 @@ const prisma_1 = require("../lib/prisma");
 const strava_service_1 = require("../services/strava.service");
 const backfill_1 = require("../scripts/backfill");
 const verifyWebhook = (req, res) => {
+    const mode = req.query["hub.mode"];
+    const token = req.query["hub.verify_token"];
     const challenge = req.query["hub.challenge"];
-    if (req.query["hub.verify_token"] === process.env.STRAVA_WEBHOOK_VERIFY_TOKEN) {
+    console.log(`[Strava Webhook] Verification request: mode=${mode}, token=${token}`);
+    if (mode === "subscribe" && token === process.env.STRAVA_WEBHOOK_VERIFY_TOKEN) {
+        console.log("[Strava Webhook] WEBHOOK_VERIFIED");
         return res.status(200).json({ "hub.challenge": challenge });
     }
+    console.error("[Strava Webhook] Verification failed: token mismatch");
     res.sendStatus(403);
 };
 exports.verifyWebhook = verifyWebhook;

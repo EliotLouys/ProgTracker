@@ -85,8 +85,13 @@ export const deleteMeal = async (req: AuthRequest, res: Response) => {
   if (!req.userId) return res.sendStatus(401);
   try {
     const { id } = req.params;
-    await prisma.mealLog.delete({
+    const existing = await prisma.mealLog.findFirst({
       where: { id, userId: req.userId },
+    });
+    if (!existing) return res.status(404).json({ error: "Meal not found" });
+
+    await prisma.mealLog.delete({
+      where: { id },
     });
     res.sendStatus(204);
   } catch (error: any) {
